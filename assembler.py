@@ -14,7 +14,7 @@ def hex_to_binary(n):
     dict_hex_to_bin = {'0':'0000','1':'0001','2':'0010','3':'0011','4':'0100','5':'0101','6':'0110','7':'0111','8':'1000','9':'1001','A':'1010','B':'1011','C':'1100','D':'1101','E':'1110','F':'1111'}
     n=''.join([dict_hex_to_bin[i] for i in n])
     return n
-
+ 
 def sext(imm): #Each register is 32 bit wide and thus each constant value(binary form) is extended to 32 bits
     if imm[0:2]=='0x': imm=hex_to_binary(imm[2:])
     else: imm=dec_to_binary(imm)
@@ -26,45 +26,58 @@ def sext(imm): #Each register is 32 bit wide and thus each constant value(binary
 
 def R_conversion(l_parts,instruction):#[instruction,rd,rs1,rs2]
     dict_funct7_funct3_opcode={'add':['0000000','000','0110011'],'sub':['0100000','000','0110011'],'sll':['0000000','001','0110011'],'slt':['0000000','010','0110011'],'sltu':['0000000','011','0110011'],'xor':['0000000','100','0110011'],'srl':['0000000','101','0110011'],'or':['0000000','110','0110011'],'and':['0000000','111','0110011'],'mul':['0000001','000','0110011']}
-    line_encoded=dict_funct7_funct3_opcode[instruction][0]+dict_registers[l_parts[3]]+dict_registers[l_parts[2]]+dict_funct7_funct3_opcode[instruction][1]+dict_registers[l_parts[1]]+dict_funct7_funct3_opcode[instruction][2] #funct7+rs2+rs1+funct3+rd+opcode
+    rd=l_parts[1]
+    rs1=l_parts[2]
+    rs2=l_parts[3]
+    line_encoded=dict_funct7_funct3_opcode[instruction][0]+dict_registers[rs2]+dict_registers[rs1]+dict_funct7_funct3_opcode[instruction][1]+dict_registers[rd]+dict_funct7_funct3_opcode[instruction][2] #funct7+rs2+rs1+funct3+rd+opcode
     return line_encoded+'\n'
 
 def I_conversion(l_parts,instruction):
     dict_funct3_opcode={'lw':['010','0000011'],'addi':['000','0010011'],'sltiu':['011','0010011'],'jalr':['000','1100111']}
     if instruction=='lw': #[lw,rd,imm,rs1]
+        rd=l_parts[1]
         imm=sext(l_parts[2])
-        line_encoded=imm[32-11-1:]+dict_registers[l_parts[3]]+dict_funct3_opcode[instruction][0]+dict_registers[l_parts[1]]+dict_funct3_opcode[instruction][1] #imm+rs+funct3+rd+opcode
+        rs1=l_parts[3]
+        line_encoded=imm[32-11-1:]+dict_registers[rs1]+dict_funct3_opcode[instruction][0]+dict_registers[rd]+dict_funct3_opcode[instruction][1] #imm+rs+funct3+rd+opcode
     else:#[instruction,rd,rs/x6,imm]
+        rd=l_parts[1]
         imm=sext(l_parts[3])
-        line_encoded=imm[32-11-1:]+dict_registers[l_parts[2]]+dict_funct3_opcode[instruction][0]+dict_registers[l_parts[1]]+dict_funct3_opcode[instruction][1]
+        rs=l_parts[2]
+        line_encoded=imm[32-11-1:]+dict_registers[rs]+dict_funct3_opcode[instruction][0]+dict_registers[rd]+dict_funct3_opcode[instruction][1]
     return line_encoded+'\n'
 
 def S_conversion(l_parts,instruction):#[sw,rs2,imm,rs1]
     dict_funct3_opcode={'sw':['010','0100011']}
     imm=sext(l_parts[2])
-    line_encoded=imm[32-11-1:32-5]+dict_registers[l_parts[1]]+dict_registers[l_parts[3]]+dict_funct3_opcode[instruction][0]+imm[32-4-1:]+dict_funct3_opcode[instruction][1] 
+    rs2=l_parts[1]
+    rs1=l_parts[3]
+    line_encoded=imm[32-11-1:32-5]+dict_registers[rs2]+dict_registers[rs1]+dict_funct3_opcode[instruction][0]+imm[32-4-1:]+dict_funct3_opcode[instruction][1] 
     return line_encoded+'\n'
 
 def B_conversion(l_parts,instruction):#[instruction,rs1,rs2,imm/label]
     dict_funct3_opcode={'beq':['000','1100011'],'bne':['001','1100011'],'blt':['100','1100011'],'bge':['101','1100011'],'bltu':['110','1100011'],'bgeu':['111','1100011']}
     if(l_parts[3].isalnum()):
+        rs1=l_parts[1]
+        rs2=l_parts[2]
         imm=sext(l_parts[3])
-        line_encoded=(imm[32-12-1]+imm[32-10-1:32-5])+dict_registers[l_parts[2]]+dict_registers[l_parts[1]]+dict_funct3_opcode[instruction][0]+(imm[32-4-1:32-1]+imm[32-11-1])+dict_funct3_opcode[instruction][1] #imm[12|10:5]+rs2+rs1+funct3+imm[4:1|11]+opcode
+        line_encoded=(imm[32-12-1]+imm[32-10-1:32-5])+dict_registers[rs2]+dict_registers[rs1]+dict_funct3_opcode[instruction][0]+(imm[32-4-1:32-1]+imm[32-11-1])+dict_funct3_opcode[instruction][1] #imm[12|10:5]+rs2+rs1+funct3+imm[4:1|11]+opcode
         return line_encoded+'\n'
     # else:
     #     return
 
 def U_conversion(l_parts,instruction):#[instruction,rd,imm]
     dict_opcode={'lui':'0110111','auipc':'0010111'}
+    rd=l_parts[1]
     imm=sext(l_parts[2])
-    l_encoded=imm[32-31-1:32-12]+dict_registers[l_parts[1]]+dict_opcode[instruction]
+    l_encoded=imm[32-31-1:32-12]+dict_registers[rd]+dict_opcode[instruction]
     return l_encoded+'\n'
 
 def J_conversion(l_parts,instruction):#[instruction,rd,imm]
     dict_opcode={'jal':'1101111'}
     if(l_parts[2][1:].isalnum()): #[1:] because there can be a - sign in start
+        rd=l_parts[1]
         imm=sext(l_parts[2])
-        l_encoded=(imm[32-20-1]+imm[32-10-1:32-1]+imm[32-11-1]+imm[32-19-1:32-12])+dict_registers[l_parts[1]]+dict_opcode[instruction]
+        l_encoded=(imm[32-20-1]+imm[32-10-1:32-1]+imm[32-11-1]+imm[32-19-1:32-12])+dict_registers[rd]+dict_opcode[instruction]
         return l_encoded+'\n'
     # else:
     #     return
@@ -83,6 +96,8 @@ l_base_instructions_U=['auipc','lui']
 l_base_instructions_J=['jal']
 l_base_instructions_bonus=['mul','rst','halt','rvrs']
 dict_registers = {"zero": "00000","ra": "00001","sp": "00010","gp": "00011","tp": "00100","t0": "00101","t1": "00110","t2": "00111","s0": "01000","fp": "01000","s1": "01001","a0": "01010","a1": "01011","a2": "01100","a3": "01101","a4": "01110","a5": "01111","a6": "10000","a7": "10001","s2": "10010","s3": "10011","s4": "10100","s5": "10101","s6": "10110","s7": "10111","s8": "11000","s9": "11001","s10": "11010","s11": "11011","t3": "11100","t4": "11101","t5": "11110","t6": "11111"}
+dict_registers_values={}
+for i in dict_registers: dict_registers_values[i]='0'*32 
 l_machine_code=[]
 for i in l_code_lines:
     l_parts=re.split(r'[,()\s]+',i)
