@@ -25,69 +25,55 @@ def sext(imm): #Each register is 32 bit wide and thus each constant value(binary
     imm=k+imm
     return imm
 
-def R_conversion(l_parts,instruction,line_num):#[instruction,rd,rs1,rs2]
+def R_conversion(l_parts,instruction):#[instruction,rd,rs1,rs2]
     dict_funct7_funct3_opcode={'add':['0000000','000','0110011'],'sub':['0100000','000','0110011'],'sll':['0000000','001','0110011'],'slt':['0000000','010','0110011'],'sltu':['0000000','011','0110011'],'xor':['0000000','100','0110011'],'srl':['0000000','101','0110011'],'or':['0000000','110','0110011'],'and':['0000000','111','0110011'],'mul':['0000001','000','0110011']}
     rd=l_parts[1]
     rs1=l_parts[2]
     rs2=l_parts[3]
-    if(rd not in dict_registers or rs1 not in dict_registers or rs2 not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
     line_encoded=dict_funct7_funct3_opcode[instruction][0]+dict_registers[rs2]+dict_registers[rs1]+dict_funct7_funct3_opcode[instruction][1]+dict_registers[rd]+dict_funct7_funct3_opcode[instruction][2] #funct7+rs2+rs1+funct3+rd+opcode
     return line_encoded+'\n'
 
-def I_conversion(l_parts,instruction,line_num):
+def I_conversion(l_parts,instruction):
     dict_funct3_opcode={'lw':['010','0000011'],'addi':['000','0010011'],'sltiu':['011','0010011'],'jalr':['000','1100111']}
     if instruction=='lw': #[lw,rd,imm,rs1]
         rd=l_parts[1]
         imm=sext(l_parts[2])
-        if(imm=='Error'): return ['Error','Immediate value exceeds 32 bits at line:'+str(line_num)]
         rs1=l_parts[3]
-        if(rd not in dict_registers or rs1 not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
         line_encoded=imm[32-11-1:]+dict_registers[rs1]+dict_funct3_opcode[instruction][0]+dict_registers[rd]+dict_funct3_opcode[instruction][1] #imm+rs+funct3+rd+opcode
     else:#[instruction,rd,rs/x6,imm]
         rd=l_parts[1]
         imm=sext(l_parts[3])
-        if(imm=='Error'): return ['Error','Immediate value exceeds 32 bits at line:'+str(line_num)]
         rs=l_parts[2]
-        if(rd not in dict_registers or rs1 not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
         line_encoded=imm[32-11-1:]+dict_registers[rs]+dict_funct3_opcode[instruction][0]+dict_registers[rd]+dict_funct3_opcode[instruction][1]
     return line_encoded+'\n'
 
-def S_conversion(l_parts,instruction,line_num):#[sw,rs2,imm,rs1]
+def S_conversion(l_parts,instruction):#[sw,rs2,imm,rs1]
     dict_funct3_opcode={'sw':['010','0100011']}
     imm=sext(l_parts[2])
-    if(imm=='Error'): return ['Error','Immediate value exceeds 32 bits at line:'+str(line_num)]
     rs2=l_parts[1]
     rs1=l_parts[3]
-    if(rs2 not in dict_registers or rs1 not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
     line_encoded=imm[32-11-1:32-5]+dict_registers[rs2]+dict_registers[rs1]+dict_funct3_opcode[instruction][0]+imm[32-4-1:]+dict_funct3_opcode[instruction][1] 
     return line_encoded+'\n'
 
 def B_conversion(l_parts,instruction,line_num):#[instruction,rs1,rs2,imm/label]
     dict_funct3_opcode={'beq':['000','1100011'],'bne':['001','1100011'],'blt':['100','1100011'],'bge':['101','1100011'],'bltu':['110','1100011'],'bgeu':['111','1100011']}
-    if(l_parts==['beq','zero','zero','0'] and line_num!=len(l_code_lines)-1): return ['Error','Virtual halt at line '+str(line_num)+'and not at lasts line'] 
     if(l_parts[3].isdigit() or (l_parts[3][0]=='-' and l_parts[3][1:].isdigit())):
         rs1=l_parts[1]
         rs2=l_parts[2]
-        if(rs2 not in dict_registers or rs1 not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
         imm=sext(l_parts[3])
-        if(imm=='Error'): return ['Error','Immediate value exceeds 32 bits at line:'+str(line_num)]
         line_encoded=(imm[32-12-1]+imm[32-10-1:32-5])+dict_registers[rs2]+dict_registers[rs1]+dict_funct3_opcode[instruction][0]+(imm[32-4-1:32-1]+imm[32-11-1])+dict_funct3_opcode[instruction][1] #imm[12|10:5]+rs2+rs1+funct3+imm[4:1|11]+opcode
         return line_encoded+'\n'
     else:
         rs1=l_parts[1]
         rs2=l_parts[2]
-        if(rs2 not in dict_registers or rs1 not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
         imm=sext(str((line_num-dict_label[l_parts[3]])*4))
-        if(imm=='Error'): return ['Error','Immediate value exceeds 32 bits at line:'+str(line_num)]
         line_encoded=(imm[32-12-1]+imm[32-10-1:32-5])+dict_registers[rs2]+dict_registers[rs1]+dict_funct3_opcode[instruction][0]+(imm[32-4-1:32-1]+imm[32-11-1])+dict_funct3_opcode[instruction][1] #imm[12|10:5]+rs2+rs1+funct3+imm[4:1|11]+opcode
         return line_encoded+'\n'
 
-def U_conversion(l_parts,instruction,line_num):#[instruction,rd,imm]
+def U_conversion(l_parts,instruction):#[instruction,rd,imm]
     dict_opcode={'lui':'0110111','auipc':'0010111'}
     rd=l_parts[1]
-    if(rd not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
     imm=sext(l_parts[2])
-    if(imm=='Error'): return ['Error',['Error','Immediate value exceeds 32 bits at line:'+str(line_num)]]
     l_encoded=imm[32-31-1:32-12]+dict_registers[rd]+dict_opcode[instruction]
     return l_encoded+'\n'
 
@@ -95,16 +81,12 @@ def J_conversion(l_parts,instruction,line_num):#[instruction,rd,imm]
     dict_opcode={'jal':'1101111'}
     if(l_parts[2].isdigit() or (l_parts[2][0]=='-' and l_parts[2][1:].isdigit())): #[1:] because there can be a - sign in start
         rd=l_parts[1]
-        if(rd not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
         imm=sext(l_parts[2])
-        if(imm=='Error'): return ['Error',['Error','Immediate value exceeds 32 bits at line:'+str(line_num)]]
         l_encoded=(imm[32-20-1]+imm[32-10-1:32-1]+imm[32-11-1]+imm[32-19-1:32-12])+dict_registers[rd]+dict_opcode[instruction]
         return l_encoded+'\n'
     else:
         rd=l_parts[1]
-        if(rd not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
         imm=sext(str((line_num-dict_label[l_parts[2]])*4))
-        if(imm=='Error'): return ['Error',['Error','Immediate value exceeds 32 bits at line:'+str(line_num)]]
         l_encoded=(imm[32-20-1]+imm[32-10-1:32-1]+imm[32-11-1]+imm[32-19-1:32-12])+dict_registers[rd]+dict_opcode[instruction]
         return l_encoded+'\n'
 
@@ -133,43 +115,19 @@ for i in range(len(l_code_lines)):
 
 for i in range(len(l_code_lines)):
     l_parts=re.split(r'[,()\s]+',l_code_lines[i])
-    if(l_parts[0] not in l_instructions):
-        l_machine_code.append(["Error","Instruction typo Error at line:"+str(i+1)])
-        break
     while(l_parts[0] not in l_instructions or len(l_parts)==0): l_parts.pop(0)
     if len(l_parts)==0: continue
-    if(l_parts==['addi','zero','zero','0'] or l_parts==['addi','x0','x0','0']): continue
-    if(i==len(l_code_lines)-1 and l_parts!=['beq','zero','zero','0']): l_machine_code.append(['Error','Virtual halt not present in the code'])
-    if l_parts[0] in l_base_instructions_R: 
-        returning_value=R_conversion(l_parts,l_parts[0],i+1)
-        l_machine_code.append(returning_value)
-        if returning_value[0]=='Error': break
-    elif l_parts[0] in l_base_instructions_I: 
-        returning_value=I_conversion(l_parts,l_parts[0],i+1)
-        l_machine_code.append(returning_value)
-        if returning_value[0]=='Error': break
-    elif l_parts[0] in l_base_instructions_S: 
-        returning_value=S_conversion(l_parts,l_parts[0],i+1)
-        l_machine_code.append(returning_value)
-        if returning_value[0]=='Error': break
-    elif l_parts[0] in l_base_instructions_B: 
-        returning_value=B_conversion(l_parts,l_parts[0],i+1)
-        l_machine_code.append(returning_value)
-        if returning_value[0]=='Error': break
-    elif l_parts[0] in l_base_instructions_U: 
-        returning_value=U_conversion(l_parts,l_parts[0],i+1)
-        l_machine_code.append(returning_value)
-        if returning_value[0]=='Error': break
-    elif l_parts[0] in l_base_instructions_J: 
-        returning_value=J_conversion(l_parts,l_parts[0],i+1)
-        l_machine_code.append(returning_value)
-        if returning_value[0]=='Error': break
+    if l_parts[0] in l_base_instructions_R: l_machine_code.append(R_conversion(l_parts,l_parts[0]))
+    elif l_parts[0] in l_base_instructions_I: l_machine_code.append(I_conversion(l_parts,l_parts[0]))
+    elif l_parts[0] in l_base_instructions_S: l_machine_code.append(S_conversion(l_parts,l_parts[0]))
+    elif l_parts[0] in l_base_instructions_B: l_machine_code.append(B_conversion(l_parts,l_parts[0],i+1))
+    elif l_parts[0] in l_base_instructions_U: l_machine_code.append(U_conversion(l_parts,l_parts[0]))
+    elif l_parts[0] in l_base_instructions_J: l_machine_code.append(J_conversion(l_parts,l_parts[0],i+1))
     # elif l_parts[0] in l_base_instructions_bonus: str_machine_code+=bonus_conversion(i,l_parts[0])
     else: continue
+    
+l_machine_code[len(l_machine_code)-1]=l_machine_code[len(l_machine_code)-1].replace('\n','') #removing escape sequence from last line
 
 with open('output.txt','w') as f:
-    if(l_machine_code[len(l_machine_code)-1][0]=="Error"): f.write(l_machine_code[len(l_machine_code)-1][1])
-    else:
-        l_machine_code[len(l_machine_code)-1]=l_machine_code[len(l_machine_code)-1].replace('\n','') #removing escape sequence from last line
-        for i in l_machine_code:
-            f.write(i) #ek hi run mei multiple writes append ka kaam krte hai aur override nhi krte
+    for i in l_machine_code:
+        f.write(i) #ek hi run mei multiple writes append ka kaam krte hai aur override nhi krte
