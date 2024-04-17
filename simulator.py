@@ -1,7 +1,8 @@
 #For unsigned case int(,2) will handle for signed case twos_comp_to_dec will handle
 def print_all_registers():
+    dict_registers_values['00000']='0'*32
     with open('output.txt','a') as f:
-        f.write('0b'+sext(str(pc))+' ')
+        f.write('0b'+sext(dec_to_twos_comp(str(pc)))+' ')
         s=''
         for i in dict_registers_values:
             s+=('0b'+dict_registers_values[i]+' ')
@@ -39,9 +40,6 @@ def hex_to_binary(n):
     return n
 
 def sext(imm): #Each register is 32 bit wide and thus each constant value(binary form) is extended to 32 bits
-    if imm[0:2]=='0x': imm=hex_to_binary(imm[2:])
-    else: imm=dec_to_twos_comp(imm)
-    if len(imm)>32: return 'Error'
     signed_bit=imm[0]
     k=(32-len(imm))*signed_bit
     imm=k+imm
@@ -51,71 +49,62 @@ def add(m_code):
     rs2=m_code[7:12]
     rs1=m_code[12:17]
     rd=m_code[20:25]
-    value=sext(str(twos_comp_to_dec(dict_registers_values[rs1])+twos_comp_to_dec(dict_registers_values[rs2])))
+    value=sext(dec_to_twos_comp(twos_comp_to_dec(dict_registers_values[rs1])+twos_comp_to_dec(dict_registers_values[rs2])))
     dict_registers_values[rd]=value
-    print_all_registers()
 
 def sub(m_code):
     rs2=m_code[7:12]
     rs1=m_code[12:17]
     rd=m_code[20:25]
-    value=sext(str(twos_comp_to_dec(dict_registers_values[rs1])-twos_comp_to_dec(dict_registers_values[rs2])))
+    value=sext(dec_to_twos_comp(twos_comp_to_dec(dict_registers_values[rs1])-twos_comp_to_dec(dict_registers_values[rs2])))
     dict_registers_values[rd]=value
-    print_all_registers()
 
 def sll(m_code):
     rs2=m_code[7:12]
     rs1=m_code[12:17]
     rd=m_code[20:25]
-    value=sext(str(int(dict_registers_values[rs1],2)*(2**int(dict_registers_values[rs2][32-4-1:],2))))
+    value=sext(dec_to_twos_comp(int(dict_registers_values[rs1],2)*(2**int(dict_registers_values[rs2][32-4-1:],2))))
     dict_registers_values[rd]=value
-    print_all_registers()
 
 def slt(m_code):
     rs2=m_code[7:12]
     rs1=m_code[12:17]
     rd=m_code[20:25]
     if(twos_comp_to_dec(dict_registers_values[rs1])<twos_comp_to_dec(dict_registers_values[rs2])): dict_registers_values[rd]='0'*31+'1'
-    print_all_registers()
 
 def sltu(m_code):
     rs2=m_code[7:12]
     rs1=m_code[12:17]
     rd=m_code[20:25]
     if(int(dict_registers_values[rs1],2)<int(dict_registers_values[rs2],2)): dict_registers_values[rd]='0'*31+'1'
-    print_all_registers()
 
 def srl(m_code):
     rs2=m_code[7:12]
     rs1=m_code[12:17]
     rd=m_code[20:25]
-    value=sext(str(int(dict_registers_values[rs1],2)//(2**int(dict_registers_values[rs2][32-4-1:],2))))
+    value=sext(dec_to_twos_comp(int(dict_registers_values[rs1],2)//(2**int(dict_registers_values[rs2][32-4-1:],2))))
     dict_registers_values[rd]=value
-    print_all_registers()
 
 def xor(m_code):
     rs2=m_code[7:12]
     rs1=m_code[12:17]
     rd=m_code[20:25]
-    value=sext(str(twos_comp_to_dec(dict_registers_values[rs1])^twos_comp_to_dec(dict_registers_values[rs2])))
+    value=sext(dec_to_twos_comp(twos_comp_to_dec(dict_registers_values[rs1])^twos_comp_to_dec(dict_registers_values[rs2])))
     dict_registers_values[rd]=value
-    print_all_registers()
 
 def Or(m_code):
     rs2=m_code[7:12]
     rs1=m_code[12:17]
     rd=m_code[20:25]
-    value=sext(str(twos_comp_to_dec(dict_registers_values[rs1])|twos_comp_to_dec(dict_registers_values[rs2])))
+    value=sext(dec_to_twos_comp(twos_comp_to_dec(dict_registers_values[rs1])|twos_comp_to_dec(dict_registers_values[rs2])))
     dict_registers_values[rd]=value
-    print_all_registers()
 
 def And(m_code):
     rs2=m_code[7:12]
     rs1=m_code[12:17]
     rd=m_code[20:25]
-    value=sext(str(twos_comp_to_dec(dict_registers_values[rs1])&twos_comp_to_dec(dict_registers_values[rs2])))
+    value=sext(dec_to_twos_comp(twos_comp_to_dec(dict_registers_values[rs1])&twos_comp_to_dec(dict_registers_values[rs2])))
     dict_registers_values[rd]=value
-    print_all_registers()
 
 def lw(m_code):
     imm=m_code[0:12]
@@ -125,30 +114,28 @@ def lw(m_code):
     value=hex(value)
     value='0x'+(10-len(value))*'0'+value[2:]
     dict_registers_values[rd]=dict_memory_values[value]
-    print_all_registers()
 
 def addi(m_code):
     imm=m_code[0:12]
     rs=m_code[32-19-1:32-15]
     rd=m_code[32-11-1:32-7]
-    dict_registers_values[rd]=sext(str(twos_comp_to_dec(dict_registers_values[rs])+twos_comp_to_dec(imm)))
-    print_all_registers()
+    dict_registers_values[rd]=sext(dec_to_twos_comp(twos_comp_to_dec(dict_registers_values[rs])+twos_comp_to_dec(imm)))
 
 def sltiu(m_code):
     imm=m_code[0:12]
     rs=m_code[32-19-1:32-15]
     rd=m_code[32-11-1:32-7]
     dict_registers_values[rd]='0'*31+'1' if(int(dict_registers_values[rs],2)<int(imm,2)) else dict_registers_values[rd]
-    print_all_registers()
 
 def jalr(m_code):
     global pc
     imm=m_code[0:12]
     rs=m_code[32-19-1:32-15]
     rd=m_code[32-11-1:32-7]
-    dict_registers_values[rd]=sext(str(pc+4))
+    dict_registers_values[rd]=sext(dec_to_twos_comp(str((pc+4))))
+    print(dict_registers_values[rd])
     pc=(twos_comp_to_dec(dict_registers_values[rs])+twos_comp_to_dec(sext(imm)))
-    print_all_registers()
+    # print_all_registers()
 
 def sw(m_code):
     imm=m_code[0:7]+m_code[32-11-1:32-7]
@@ -157,74 +144,87 @@ def sw(m_code):
     value=hex(twos_comp_to_dec(dict_registers_values[rs1])+twos_comp_to_dec(imm))
     value='0x'+(10-len(value))*'0'+value[2:]
     dict_memory_values[value]=dict_registers_values[rs2]
-    print_all_registers()
 
 def beq(m_code):
     global pc
     imm=m_code[0]+m_code[32-7-1]+m_code[1:32-25]+m_code[32-11-1:32-7-1]
     rs2=m_code[32-24-1:32-20]
     rs1=m_code[32-19-1:32-15]
-    if(twos_comp_to_dec(dict_registers_values[rs1])==twos_comp_to_dec(dict_registers_values[rs2])): pc=pc+twos_comp_to_dec(imm+'0')
-    print_all_registers()
+    if(twos_comp_to_dec(dict_registers_values[rs1])==twos_comp_to_dec(dict_registers_values[rs2])):
+        pc=pc+twos_comp_to_dec(imm+'0')
+        return 1
+    return 0
 
 def bne(m_code):
     global pc
     imm=m_code[0]+m_code[32-7-1]+m_code[1:32-25]+m_code[32-11-1:32-7-1]
     rs2=m_code[32-24-1:32-20]
     rs1=m_code[32-19-1:32-15]
-    if(twos_comp_to_dec(dict_registers_values[rs1])!=twos_comp_to_dec(dict_registers_values[rs2])):         pc=pc+twos_comp_to_dec(imm+'0')
-    print_all_registers()
+    if(twos_comp_to_dec(dict_registers_values[rs1])!=twos_comp_to_dec(dict_registers_values[rs2])):
+        pc=pc+twos_comp_to_dec(imm+'0')
+        return 1
+    return 0
 
 def bge(m_code):
     global pc
     imm=m_code[0]+m_code[32-7-1]+m_code[1:32-25]+m_code[32-11-1:32-7-1]
     rs2=m_code[32-24-1:32-20]
     rs1=m_code[32-19-1:32-15]
-    if(twos_comp_to_dec(dict_registers_values[rs1])>=twos_comp_to_dec(dict_registers_values[rs2])): pc=pc+twos_comp_to_dec(imm+'0')
-    print_all_registers()
+    if(twos_comp_to_dec(dict_registers_values[rs1])>=twos_comp_to_dec(dict_registers_values[rs2])):
+        pc=pc+twos_comp_to_dec(imm+'0')
+        return 1
+    return 0
 
 def bgeu(m_code):
     global pc
     imm=m_code[0]+m_code[32-7-1]+m_code[1:32-25]+m_code[32-11-1:32-7-1]
     rs2=m_code[32-24-1:32-20]
     rs1=m_code[32-19-1:32-15]
-    if(int(dict_registers_values[rs1],2)>=int(dict_registers_values[rs2],2)): pc=pc+twos_comp_to_dec(imm+'0')
-    print_all_registers()
+    if(int(dict_registers_values[rs1],2)>=int(dict_registers_values[rs2],2)):
+        pc=pc+twos_comp_to_dec(imm+'0')
+        return 1
+    return 0
 
 def blt(m_code):
     global pc
     imm=m_code[0]+m_code[32-7-1]+m_code[1:32-25]+m_code[32-11-1:32-7-1]
     rs2=m_code[32-24-1:32-20]
     rs1=m_code[32-19-1:32-15]
-    if(twos_comp_to_dec(dict_registers_values[rs1])<twos_comp_to_dec(dict_registers_values[rs2])): pc=pc+twos_comp_to_dec(imm+'0')
-    print_all_registers()
+    if(twos_comp_to_dec(dict_registers_values[rs1])<twos_comp_to_dec(dict_registers_values[rs2])):
+        pc=pc+twos_comp_to_dec(imm+'0')
+        return 1
+    return 0
 
 def bltu(m_code):
     global pc
     imm=m_code[0]+m_code[32-7-1]+m_code[1:32-25]+m_code[32-11-1:32-7-1]
     rs2=m_code[32-24-1:32-20]
     rs1=m_code[32-19-1:32-15]
-    if(int(dict_registers_values[rs1],2)<int(dict_registers_values[rs2],2)): pc=pc+twos_comp_to_dec(imm+'0')
-    print_all_registers()
+    if(int(dict_registers_values[rs1],2)<int(dict_registers_values[rs2],2)): 
+        pc=pc+twos_comp_to_dec(imm+'0')
+        return 1
+    return 0
 
 def lui(m_code):
     imm=m_code[0:20]+12*'0'
     rd=m_code[20:32-7]
     dict_registers_values[rd]=imm
-    print_all_registers()
 
 def auipc(m_code):
     imm=m_code[0:20]+12*'0'
     rd=m_code[20:32-7]
-    dict_registers_values[rd]=sext(str(pc+twos_comp_to_dec(imm)))
-    print_all_registers()
+    dict_registers_values[rd]=sext(dec_to_twos_comp(str(pc+twos_comp_to_dec(imm))))
 
 def jal(m_code):
     global pc
-    imm=m_code[0]+m_code[32-19-1:32-12]+m_code[32-20-1]+m_code[32-30-1:21]
+    imm=m_code[32-31-1]+m_code[32-19-1:32-12]+m_code[32-20-1]+m_code[32-30-1:32-21]
+    # 0 12:20 11 1:11
+    print(imm)
+    print(twos_comp_to_dec(imm+'0'))
+    print(sext(imm))
     rd=m_code[32-11-1:32-7]
-    dict_registers_values[rd]=sext(str(pc+4))
-    pc=pc+twos_comp_to_dec(sext(imm+'0'))
+    dict_registers_values[rd]=sext(dec_to_twos_comp(str(pc+4)))
+    pc+=twos_comp_to_dec(imm+'0')
 
 dict_registers= {"00000": "zero", "00001": "ra", "00010": "sp", "00011": "gp", "00100": "tp", "00101": "t0", "00110": "t1", "00111": "t2", "01000": "s0/fp", "01001": "s1", "01010": "a0", "01011": "a1", "01100": "a2", "01101": "a3", "01110": "a4", "01111": "a5", "10000": "a6", "10001": "a7", "10010": "s2", "10011": "s3", "10100": "s4", "10101": "s5", "10110": "s6", "10111": "s7", "11000": "s8", "11001": "s9", "11010": "s10", "11011": "s11", "11100": "t3", "11101": "t4", "11110": "t5", "11111": "t6"}
 dict_registers_values={key:'0'*32 for key in dict_registers}
@@ -235,69 +235,124 @@ dict_lines_addresses={} #Integer(not binary/hexa) to machine code mapping
 with open('test_case.txt','r') as f:
     l_machine_code=[i.rstrip('\n') for i in f.readlines()]
 
-pc=4
-j=4
+pc=0
+j=0
 for i in l_machine_code:
     dict_lines_addresses[j]=i
-    if(i=='0'*25+'1100011'): break #in case halt is in between the code
     j+=4
-#now j stores the value of halt in the case the code is normal
 
-for i in l_machine_code:
+with open('output.txt','w') as f:
+    {}
+
+while(pc<=j):
+    i=dict_lines_addresses[pc]
     #R type
-    if(i[0:7]=='0000000' and i[17:20]=='000' and i[25:]=='0110011') : add(i)
-    elif(i[0:7]=='0100000' and i[17:20]=='000' and i[25:]=='0110011'): sub(i)
-    elif(i[0:7]=='0000000' and i[17:20]=='001' and i[25:]=='0110011'): sll(i)
-    elif(i[0:7]=='0000000' and i[17:20]=='010' and i[25:]=='0110011'): slt(i)
-    elif(i[0:7]=='0000000' and i[17:20]=='011' and i[25:]=='0110011'): sltu(i)
-    elif(i[0:7]=='0000000' and i[17:20]=='100' and i[25:]=='0110011'): xor(i)
-    elif(i[0:7]=='0000000' and i[17:20]=='101' and i[25:]=='0110011'): srl(i)
-    elif(i[0:7]=='0000000' and i[17:20]=='110' and i[25:]=='0110011'): Or(i)
-    elif(i[0:7]=='0000000' and i[17:20]=='111' and i[25:]=='0110011'): And(i)
+    if(i[0:7]=='0000000' and i[17:20]=='000' and i[25:]=='0110011') :
+        add(i)
+        pc+=4
+        print_all_registers()
+    elif(i[0:7]=='0100000' and i[17:20]=='000' and i[25:]=='0110011'):
+        sub(i)
+        pc+=4
+        print_all_registers()
+    elif(i[0:7]=='0000000' and i[17:20]=='001' and i[25:]=='0110011'):
+        sll(i)
+        pc+=4
+        print_all_registers()
+    elif(i[0:7]=='0000000' and i[17:20]=='010' and i[25:]=='0110011'):
+        slt(i)
+        pc+=4
+        print_all_registers()
+    elif(i[0:7]=='0000000' and i[17:20]=='011' and i[25:]=='0110011'):
+        sltu(i)
+        pc+=4
+        print_all_registers()
+    elif(i[0:7]=='0000000' and i[17:20]=='100' and i[25:]=='0110011'):
+        xor(i)
+        pc+=4
+        print_all_registers()
+    elif(i[0:7]=='0000000' and i[17:20]=='101' and i[25:]=='0110011'):
+        srl(i)
+        pc+=4
+        print_all_registers()
+    elif(i[0:7]=='0000000' and i[17:20]=='110' and i[25:]=='0110011'):
+        Or(i)
+        pc+=4
+        print_all_registers()
+    elif(i[0:7]=='0000000' and i[17:20]=='111' and i[25:]=='0110011'):
+        And(i)
+        pc+=4
+        print_all_registers()
 
     #I type
-    elif(i[17:20]=='010' and i[25:]=='0000011'): lw(i)
-    elif(i[17:20]=='000' and i[25:]=='0010011'): addi(i)
-    elif(i[17:20]=='011' and i[25:]=='0000011'): sltiu(i)
+    elif(i[17:20]=='010' and i[25:]=='0000011'):
+        lw(i)
+        pc+=4
+        print_all_registers()
+    elif(i[17:20]=='000' and i[25:]=='0010011'):
+        addi(i)
+        pc+=4
+        print_all_registers()
+    elif(i[17:20]=='011' and i[25:]=='0000011'):
+        sltiu(i)
+        pc+=4
+        print_all_registers()
     elif(i[17:20]=='000' and i[25:]=='1100111'):
-      jalr(i)
-      # continue
+        jalr(i)
+        print_all_registers()
 
     #S type
-    elif(i[17:20]=='010' and i[25:]=='0100011'): sw(i)
+    elif(i[17:20]=='010' and i[25:]=='0100011'):
+        sw(i)
+        pc+=4
+        print_all_registers()
 
     #B type
     elif(i[17:20]=='000' and i[25:]=='1100011'):
+      flag=beq(i)
+      if(flag==0): pc+=4
+      print_all_registers()
       if(i[0:25]=='0'*25):
-          pc-=4
-          beq(i)
           break
-      beq(i)
-      # continue
+      
     elif(i[17:20]=='001' and i[25:]=='1100011'):
-      bne(i)
-      # continue
+      flag=bne(i)
+      if(flag==0): pc+=4
+      print_all_registers()
+      
     elif(i[17:20]=='100' and i[25:]=='1100011'):
-      blt(i)
-      # continue
+      flag=blt(i)
+      if(flag==0): pc+=4
+      print_all_registers()
+      
     elif(i[17:20]=='101' and i[25:]=='1100011'):
-      bge(i)
-      # continue
+      flag=bge(i)
+      if(flag==0): pc+=4
+      print_all_registers()
+      
     elif(i[17:20]=='110' and i[25:]=='1100011'):
-      bltu(i)
-      # continue
+      flag=bltu(i)
+      if(flag==0): pc+=4
+      print_all_registers()
+      
     elif(i[17:20]=='111' and i[25:]=='1100011'):
-      bgeu(i)
-      # continue
-
+      flag=bgeu(i)
+      if(flag==0): pc+=4
+      print_all_registers()
+      
     #U Type
-    elif(i[25:]=='0110111'): lui(i)
-    elif(i[25:]=='0010111'): auipc(i)
+    elif(i[25:]=='0110111'):
+        lui(i)
+        pc+=4
+        print_all_registers()
+    elif(i[25:]=='0010111'):
+        auipc(i)
+        pc+=4
+        print_all_registers()
 
     #J Type
     elif(i[25:]=='1101111'):
       jal(i)
-      # continue
-    pc+=4
-
+      print_all_registers()
+      
 print_memory_addresses() 
