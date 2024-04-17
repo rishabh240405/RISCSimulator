@@ -1,15 +1,19 @@
 #For unsigned case int(,2) will handle for signed case twos_comp_to_dec will handle
 def print_all_registers():
     with open('output.txt','a') as f:
-        f.write(sext(str(pc))+' ')
+        f.write('0b'+sext(str(pc))+' ')
+        s=''
         for i in dict_registers_values:
-            f.write('0b'+dict_registers_values[i]+' ')
+            s+=('0b'+dict_registers_values[i]+' ')
+        f.write(s)
         f.write('\n')
 
 def print_memory_addresses():
     with open('output.txt','a') as f:
+        s=''
         for i in dict_memory_values:
-            f.write(i+':0b'+dict_memory_values[i]+'\n')
+            s+=(i+':0b'+dict_memory_values[i]+'\n')
+        f.write(s)
 
 def twos_comp_to_dec(num):
     if(num[0]=='1'):
@@ -257,31 +261,34 @@ for i in l_machine_code:
     elif(i[17:20]=='011' and i[25:]=='0000011'): sltiu(i)
     elif(i[17:20]=='000' and i[25:]=='1100111'):
       jalr(i)
-      continue
+      # continue
 
     #S type
     elif(i[17:20]=='010' and i[25:]=='0100011'): sw(i)
 
     #B type
     elif(i[17:20]=='000' and i[25:]=='1100011'):
+      if(i[0:25]=='0'*25):
+          pc-=4
+          beq(i)
+          break
       beq(i)
-      if(i[0:25]=='0'*25): break
-      continue
+      # continue
     elif(i[17:20]=='001' and i[25:]=='1100011'):
       bne(i)
-      continue
+      # continue
     elif(i[17:20]=='100' and i[25:]=='1100011'):
       blt(i)
-      continue
+      # continue
     elif(i[17:20]=='101' and i[25:]=='1100011'):
       bge(i)
-      continue
+      # continue
     elif(i[17:20]=='110' and i[25:]=='1100011'):
       bltu(i)
-      continue
+      # continue
     elif(i[17:20]=='111' and i[25:]=='1100011'):
       bgeu(i)
-      continue
+      # continue
 
     #U Type
     elif(i[25:]=='0110111'): lui(i)
@@ -290,7 +297,7 @@ for i in l_machine_code:
     #J Type
     elif(i[25:]=='1101111'):
       jal(i)
-      continue
+      # continue
     pc+=4
 
 print_memory_addresses() 
