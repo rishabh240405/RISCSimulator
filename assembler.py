@@ -19,7 +19,7 @@ def hex_to_binary(n):
 def sext(imm): #Each register is 32 bit wide and thus each constant value(binary form) is extended to 32 bits
     if imm[0:2]=='0x': imm=hex_to_binary(imm[2:])
     else: imm=dec_to_twos_comp(imm)
-    if len(imm)>32: return 'Error'
+    if len(imm)>32: return imm[0:32]
     signed_bit=imm[0]
     k=(32-len(imm))*signed_bit
     imm=k+imm
@@ -35,7 +35,7 @@ def R_conversion(l_parts,instruction,line_num):#[instruction,rd,rs1,rs2]
     return line_encoded+'\n'
 
 def I_conversion(l_parts,instruction,line_num):
-    dict_funct3_opcode={'lw':['010','0000011'],'addi':['000','0010011'],'sltiu':['011','0010011'],'jalr':['000','1100111']}
+    dict_funct3_opcode={'lw':['010','0000011'],'addi':['000','0010011'],'rvrs':['001','0010011'],'sltiu':['011','0010011'],'jalr':['000','1100111']}
     if instruction=='lw': #[lw,rd,imm,rs1]
         rd=l_parts[1]
         imm=sext(l_parts[2])
@@ -76,6 +76,7 @@ def B_conversion(l_parts,instruction,line_num):#[instruction,rs1,rs2,imm/label]
     else:
         rs1=l_parts[1]
         rs2=l_parts[2]
+        if(l_parts[2] not in dict_label): return ['Error','Undefined label at line: '+str(line_num)]
         if(rs2 not in dict_registers or rs1 not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
         imm=sext(str((line_num-dict_label[l_parts[3]])*4))
         if(imm=='Error'): return ['Error','Immediate value exceeds 32 bits at line:'+str(line_num)]
@@ -102,14 +103,17 @@ def J_conversion(l_parts,instruction,line_num):#[instruction,rd,imm]
         return l_encoded+'\n'
     else:
         rd=l_parts[1]
+        if(l_parts[2] not in dict_label): return ['Error','Undefined label at line: '+str(line_num)]
         if(rd not in dict_registers): return ['Error','Typo in register name in line: '+str(line_num)]
         imm=sext(str((line_num-dict_label[l_parts[2]])*4))
         if(imm=='Error'): return ['Error',['Error','Immediate value exceeds 32 bits at line:'+str(line_num)]]
         l_encoded=(imm[32-20-1]+imm[32-10-1:32-1]+imm[32-11-1]+imm[32-19-1:32-12])+dict_registers[rd]+dict_opcode[instruction]
         return l_encoded+'\n'
 
-# def bonus_conversion(line,instruction):
-#     return
+def bonus_conversion(line,instruction):
+        dict_opcode={'halt':'1000000','rst':'10000001'}
+        l_encoded='0'*25+dict_opcode[instruction]
+        return l_encoded+'\n'
 
 with open('assembly.txt','r') as f:
     l_code_lines=[i.lstrip(' ').rstrip('\n') for i in f.readlines()]
@@ -121,7 +125,7 @@ l_base_instructions_S=['sw']
 l_base_instructions_B=['beq','bne','bge','bgeu','blt','bltu']
 l_base_instructions_U=['auipc','lui']
 l_base_instructions_J=['jal']
-l_base_instructions_bonus=['mul','rst','halt','rvrs']
+l_base_instructions_bonus=['rst','halt']
 dict_registers = {"zero": "00000","ra": "00001","sp": "00010","gp": "00011","tp": "00100","t0": "00101","t1": "00110","t2": "00111","s0": "01000","fp": "01000","s1": "01001","a0": "01010","a1": "01011","a2": "01100","a3": "01101","a4": "01110","a5": "01111","a6": "10000","a7": "10001","s2": "10010","s3": "10011","s4": "10100","s5": "10101","s6": "10110","s7": "10111","s8": "11000","s9": "11001","s10": "11010","s11": "11011","t3": "11100","t4": "11101","t5": "11110","t6": "11111"}
 
 l_machine_code=[]
@@ -130,7 +134,7 @@ dict_label={}
 for i in range(len(l_code_lines)):
     l_first=l_code_lines[i].lstrip(' ').split(' ')[0]
     if l_first[len(l_first)-1]==':': dict_label[l_first.replace(':','')]=i+1
-print(l_code_lines)
+
 for i in range(len(l_code_lines)):
     l_parts=re.split(r'[,()\s]+',l_code_lines[i])
     if(l_parts[0][0:-1] in dict_label): l_parts.pop(0)
@@ -139,7 +143,9 @@ for i in range(len(l_code_lines)):
         l_machine_code.append(["Error","Instruction typo Error at line:"+str(i+1)])
         break
     if(l_parts==['addi','zero','zero','0'] or l_parts==['addi','x0','x0','0']): continue
-    if(i==len(l_code_lines)-1 and l_parts!=['beq','zero','zero','0']): l_machine_code.append(['Error','Virtual halt not present in the code'])
+    if(i==len(l_code_lines)-1 and l_parts!=['beq','zero','zero','0']):
+        l_machine_code.append(['Error','Virtual halt not present in the code'])
+        break
     if l_parts[0] in l_base_instructions_R: 
         returning_value=R_conversion(l_parts,l_parts[0],i+1)
         l_machine_code.append(returning_value)
@@ -164,10 +170,11 @@ for i in range(len(l_code_lines)):
         returning_value=J_conversion(l_parts,l_parts[0],i+1)
         l_machine_code.append(returning_value)
         if returning_value[0]=='Error': break
-    # elif l_parts[0] in l_base_instructions_bonus: str_machine_code+=bonus_conversion(i,l_parts[0])
+    elif l_parts[0] in l_base_instructions_bonus:
+        bonus_conversion(i,l_parts[0])
     else: continue
 
-with open('output.txt','w') as f:
+with open('outputa.txt','w') as f:
     if(l_machine_code[len(l_machine_code)-1][0]=="Error"): f.write(l_machine_code[len(l_machine_code)-1][1])
     else:
         l_machine_code[len(l_machine_code)-1]=l_machine_code[len(l_machine_code)-1].replace('\n','') #removing escape sequence from last line
