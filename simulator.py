@@ -40,10 +40,18 @@ def hex_to_binary(n):
     return n
 
 def sext(imm): #Each register is 32 bit wide and thus each constant value(binary form) is extended to 32 bits
+    if(32-len(imm)<0): return imm[0:32]
     signed_bit=imm[0]
     k=(32-len(imm))*signed_bit
     imm=k+imm
     return imm
+
+def mul(m_code):
+    rs2=m_code[7:12]
+    rs1=m_code[12:17]
+    rd=m_code[20:25]
+    value=sext(dec_to_twos_comp(twos_comp_to_dec(dict_registers_values[rs1])*twos_comp_to_dec(dict_registers_values[rs2])))
+    dict_registers_values[rd]=value
 
 def add(m_code):
     rs2=m_code[7:12]
@@ -120,6 +128,11 @@ def addi(m_code):
     rs=m_code[32-19-1:32-15]
     rd=m_code[32-11-1:32-7]
     dict_registers_values[rd]=sext(dec_to_twos_comp(twos_comp_to_dec(dict_registers_values[rs])+twos_comp_to_dec(imm)))
+
+def rvrs(m_code):
+    rs=m_code[32-19-1:32-15]
+    rd=m_code[32-11-1:32-7]
+    dict_registers_values[rd]=dict_registers_values[rs][::-1]
 
 def sltiu(m_code):
     imm=m_code[0:12]
@@ -225,6 +238,10 @@ def jal(m_code):
     rd=m_code[32-11-1:32-7]
     dict_registers_values[rd]=sext(dec_to_twos_comp(str(pc+4)))
     pc+=twos_comp_to_dec(imm+'0')
+
+def rst(m_code):
+    for i in dict_registers_values:
+        dict_registers_values[i]='0'*32
 
 dict_registers= {"00000": "zero", "00001": "ra", "00010": "sp", "00011": "gp", "00100": "tp", "00101": "t0", "00110": "t1", "00111": "t2", "01000": "s0/fp", "01001": "s1", "01010": "a0", "01011": "a1", "01100": "a2", "01101": "a3", "01110": "a4", "01111": "a5", "10000": "a6", "10001": "a7", "10010": "s2", "10011": "s3", "10100": "s4", "10101": "s5", "10110": "s6", "10111": "s7", "11000": "s8", "11001": "s9", "11010": "s10", "11011": "s11", "11100": "t3", "11101": "t4", "11110": "t5", "11111": "t6"}
 dict_registers_values={key:'0'*32 for key in dict_registers}
@@ -354,5 +371,26 @@ while(pc<=j):
     elif(i[25:]=='1101111'):
       jal(i)
       print_all_registers()
-      
+
+    #Bonus part
+    #'mul':['0000001','000','0110011'] (an R type instruction)
+    elif(i[0:7]=='0000001' and i[17:20]=='000' and i[25:]=='0110011') :
+        mul(i)
+        pc+=4
+        print_all_registers()
+    #assuming rvrs as an I type instruction like rvrs  rd, rs, imm[11:0]
+    elif(i[17:20]=='001' and i[25:]=='0010011'):
+        rvrs(i)
+        pc+=4
+        print_all_registers()
+    #assuming rst opcode as 1000001
+    elif(i[25:]=='1000001'):
+        rst(i)
+        pc+=4
+        print_all_registers()
+    #assuming halt opcode as 1000000
+    elif(i[25:]=='1000000'):
+        print_all_registers()
+        break
+
 print_memory_addresses() 
